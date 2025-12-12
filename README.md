@@ -36,12 +36,14 @@ Program umożliwia:
 
 ## Instrukcja użytkowania
 
-Kliknięcie komórki – zmienia stan piksela.
-M – zmiana trybu edycji (MONO / 2-KOLORY / RGB)
-C – wyczyść matrycę
-
-Przyciski po prawej – eksport do C, PROGMEM, PNG, podgląd HEX/BIN, start/stop animacji.
-Suwak pod panelem – kontrola prędkości animacji.
+Kliknięcie komórki – zmienia stan piksela.<br>
+M – zmiana trybu edycji (MONO / 2-KOLORY / RGB)<br>
+C – wyczyść matrycę<br>
+<bvr>
+Przyciski po prawej – eksport do C, PROGMEM, PNG, podgląd HEX/BIN, start/stop animacji.<br>
+Suwak pod panelem – kontrola prędkości animacji.<br>
+<br>
+<br>
 
 ## Instalacja
 
