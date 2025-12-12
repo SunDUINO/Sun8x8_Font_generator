@@ -50,7 +50,7 @@ Suwak pod panelem – kontrola prędkości animacji.<br>
 1. Sklonuj repozytorium:
 
 ```bash
-git clone [https://github.com/TWOJE-USERNAME/Sun8x8.git](https://github.com/SunDUINO/Sun8x8_Font_generator.git)
+git clone https://github.com/SunDUINO/Sun8x8_Font_generator.git
 cd Sun8x8_Font_generator
 
 ```
