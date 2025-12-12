@@ -68,7 +68,7 @@ var (
 	}
 )
 
-var version = "0.0.4"
+var version = "0.0.5"
 var fontFace font.Face
 
 const AnimCellScale = 0.25 // 1/4 rozmiaru
@@ -170,7 +170,8 @@ func (g *Game) Update() error {
 
 	// animacja
 	if g.animRunning {
-		g.animX += float64(g.animDir) * 60 * ebiten.CurrentTPS() / 60.0 * g.animSpeed
+		//g.animX += float64(g.animDir) * 60 * ebiten.CurrentTPS() / 60.0 * g.animSpeed
+		g.animX += float64(g.animDir) * g.animSpeed * 40.0 // wartość w px na update
 		if g.animDir < 0 && g.animX < -float64(GridW*CellSize) {
 			g.animX = float64(GridW * CellSize)
 		} else if g.animDir > 0 && g.animX > float64(GridW*CellSize) {
@@ -371,7 +372,11 @@ func (g *Game) exportPNG() error {
 	if err != nil {
 		return fmt.Errorf("cannot create file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			log.Println("Warning: failed to close file:", cerr)
+		}
+	}()
 
 	if err := png.Encode(f, img); err != nil {
 		return fmt.Errorf("png encode failed: %w", err)
@@ -633,21 +638,33 @@ func (g *Game) exportFormatLabel() string {
 	return "PROGMEM"
 }
 
-// funkcja pomocnicza zapisu plików
 func chooseFilename(prefix, ext string) (string, error) {
-	// Tworzenie katalogu
+	// Tworzenie katalogu export
 	if err := os.MkdirAll("export", 0755); err != nil {
 		return "", fmt.Errorf("cannot create export directory: %w", err)
+	}
+
+	// Znajdź wolny numer pliku
+	var filename string
+	for i := 1; i < 1000; i++ {
+		filename = fmt.Sprintf("export/%s%d.%s", prefix, i, ext)
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			break
+		}
 	}
 
 	// Okno zapisu
 	path, err := dialog.File().
 		Title("Nazwa pliku eksportu").
 		SetStartDir("export").
-		Filter("Plik "+ext, "*."+ext).
 		Save()
 	if err != nil {
 		return "", err
+	}
+
+	// Jeśli użytkownik nic nie podał, użyj wygenerowanej nazwy
+	if path == "" {
+		path = filename
 	}
 
 	return path, nil
@@ -655,99 +672,120 @@ func chooseFilename(prefix, ext string) (string, error) {
 
 // Draw Rysowanie UI i podglądów
 func (g *Game) Draw(screen *ebiten.Image) {
-	// tło
+	// ----------------------
+	// 1. Tło
+	// ----------------------
 	screen.Fill(color.RGBA{R: 0x10, G: 0x10, B: 0x12, A: 0xff})
 
-	// siatka
+	// ----------------------
+	// Helper do rysowania prostokąta
+	// ----------------------
+	drawRect := func(img *ebiten.Image, x, y, w, h int, col color.Color) {
+		rect := ebiten.NewImage(w, h)
+		rect.Fill(col)
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(float64(x), float64(y))
+		img.DrawImage(rect, op)
+	}
+
+	// ----------------------
+	// 2. Siatka edytora
+	// ----------------------
 	for y := 0; y < GridH; y++ {
 		for x := 0; x < GridW; x++ {
 			px := x * CellSize
 			py := y * CellSize
-			ebitenutil.DrawRect(screen, float64(px+1), float64(py+1), float64(CellSize-2), float64(CellSize-2), color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff})
+
+			// tło komórki
+			drawRect(screen, px+1, py+1, CellSize-2, CellSize-2, color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff})
+
+			// wypełnienie paletą
 			idx := g.cells[y][x]
 			if idx != 0 {
 				c := palette[idx]
-				ebitenutil.DrawRect(screen, float64(px+3), float64(py+3), float64(CellSize-6), float64(CellSize-6), c)
+				drawRect(screen, px+3, py+3, CellSize-6, CellSize-6, c)
 			}
-			ebitenutil.DrawRect(screen, float64(px), float64(py), float64(CellSize), 1, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
-			ebitenutil.DrawRect(screen, float64(px), float64(py+CellSize-1), float64(CellSize), 1, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
-			ebitenutil.DrawRect(screen, float64(px), float64(py), 1, float64(CellSize), color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
-			ebitenutil.DrawRect(screen, float64(px+CellSize-1), float64(py), 1, float64(CellSize), color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
+
+			// obramowanie
+			drawRect(screen, px, py, CellSize, 1, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
+			drawRect(screen, px, py+CellSize-1, CellSize, 1, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
+			drawRect(screen, px, py, 1, CellSize, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
+			drawRect(screen, px+CellSize-1, py, 1, CellSize, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
 		}
 	}
 
-	// Opis suwaka i aktualna wartość prędkości
-	speedPercent := int(g.sliderValue * 100) // jeśli animSpeed = sliderValue*2
+	// ----------------------
+	// 3. Suwak prędkości animacji
+	// ----------------------
+	speedPercent := int(g.sliderValue * 100)
 	drawText(screen, fmt.Sprintf("Prędkość animacji: %d%%", speedPercent), g.sliderX, g.sliderY-20)
-
-	// SUWAK prędkości animacji nad panelem podglądu
-	ebitenutil.DrawRect(screen, float64(g.sliderX), float64(g.sliderY), float64(g.sliderW), float64(g.sliderH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawRect(screen, g.sliderX, g.sliderY, g.sliderW, g.sliderH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
 	handleX := g.sliderX + int(g.sliderValue*float64(g.sliderW))
-	ebitenutil.DrawRect(screen, float64(handleX-4), float64(g.sliderY-2), 8, float64(g.sliderH)+4, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawRect(screen, handleX-4, g.sliderY-2, 8, g.sliderH+4, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
 
-	// panel po prawej - przyciski i informacje
+	// ----------------------
+	// 4. Panel po prawej - tło i przyciski
+	// ----------------------
 	x0 := GridW * CellSize
 	y0 := 0
-	// prosty panel tła
-	ebitenutil.DrawRect(screen, float64(x0), float64(y0), float64(CanvasW-x0), float64(GridH*CellSize), color.RGBA{R: 0x18, G: 0x18, B: 0x1C, A: 0xff})
+	drawRect(screen, x0, y0, CanvasW-x0, GridH*CellSize, color.RGBA{R: 0x18, G: 0x18, B: 0x1C, A: 0xff})
 
-	// rysuj przyciski
 	btnW := 180
 	btnH := 34
 	pad := 12
 	bx := x0 + pad
 	by := y0 + pad
 
-	// przycisk 1: tryb edycji
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
-	//ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Tryb edycji: %s (M)", g.modeLabel()), bx+8, by+10)
-	drawText(screen, fmt.Sprintf("Tryb:   %s (M)", g.modeLabel()), bx+8, by+23)
+	// Tryb edycji
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, fmt.Sprintf("Tryb: %s (M)", g.modeLabel()), bx+8, by+23)
 
-	// clear
+	// Clear
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
-	//ebitenutil.DebugPrintAt(screen, "Wyczyść (C)", bx+8, by+10)
-	text.Draw(screen, "Wyczyść (C)", fontFace, bx+8, by+23, color.White)
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, "Wyczyść (C)", bx+8, by+23)
 
-	// export mode wybór
+	// Eksport: tryb
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
 	drawText(screen, fmt.Sprintf("Eksport: %s", g.exportModeLabel()), bx+8, by+23)
 
-	// format C / PROGMEM
+	// Eksport: format
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
 	drawText(screen, fmt.Sprintf("Format: %s", g.exportFormatLabel()), bx+8, by+23)
 
 	// Export C
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
 	drawText(screen, "Eksportuj C", bx+8, by+23)
 
 	// Export PROGMEM
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
 	drawText(screen, "Eksportuj PROGMEM", bx+8, by+23)
 
 	// Export PNG
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
 	drawText(screen, "Eksportuj PNG", bx+8, by+26)
 
-	// Animacja toggle
+	// Toggle animacji
 	by += btnH + pad
 	col := color.RGBA{R: 0x60, G: 0x60, B: 0x60, A: 0xff}
 	if g.animRunning {
 		col = color.RGBA{R: 0x34, G: 0xC7, B: 0x34, A: 0xff}
 	}
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), col)
+	drawRect(screen, bx, by, btnW, btnH, col)
 	if g.animRunning {
 		drawText(screen, "Stop animacji", bx+8, by+23)
 	} else {
 		drawText(screen, "Start animacji", bx+8, by+23)
 	}
+
+	// Kierunek animacji
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
 	dirText := "Kierunek: "
 	if g.animDir < 0 {
 		dirText += "←"
@@ -756,29 +794,29 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	drawText(screen, dirText, bx+8, by+23)
 
-	// Generuj podgląd
+	// Podgląd HEX/BIN
 	by += btnH + pad
-	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
 	drawText(screen, "Podgląd HEX/BIN", bx+8, by+23)
 
-	// info o ostatnim eksporcie
+	// Informacja o ostatnim eksporcie
 	drawText(screen, fmt.Sprintf("Plik: %s", g.lastExport), bx, by+btnH+pad+10)
 
-	// panel tekstowy z prawej - previewText
+	// ----------------------
+	// 5. Panel tekstowy z prawej - previewText
+	// ----------------------
 	textX := x0 + btnW + pad*2
 	textY := pad
-	// ramka
 	w := CanvasW - textX - pad
-	h := CanvasH - textY - pad - 120 // miejsce na animację + stopka
-	ebitenutil.DrawRect(screen, float64(textX), float64(textY), float64(w), float64(h), color.RGBA{R: 0x0E, G: 0x0E, B: 0x10, A: 0xff})
-	// wypisz tekst (linia po linii)
+	h := CanvasH - textY - pad - 120
+	drawRect(screen, textX, textY, w, h, color.RGBA{R: 0x0E, G: 0x0E, B: 0x10, A: 0xff})
+
 	lines := strings.Split(g.previewText, "\n")
 	yline := textY + 6
 	for i, ln := range lines {
 		if i > 30 {
 			break
 		}
-		// krótki wrap
 		if len(ln) > 80 {
 			ln = ln[:80] + "..."
 		}
@@ -786,59 +824,39 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		yline += 12
 	}
 
-	// podgląd animacji – symulacja szerokiej matrycy 32x8
+	// ----------------------
+	// 6. Podgląd animacji
+	// ----------------------
 	playX := 12
 	playY := GridH*CellSize + 280
-
-	scaleW := 0.78 // dopasowanie do okna
-	scaleH := 2.0  // 2x wysokość 8x8
-
+	scaleW := 0.78
+	scaleH := 2.0
 	playW := int(float64(GridW*CellSize*4) * scaleW)
 	playH := int(float64(CellSize) * scaleH)
+	drawRect(screen, playX, playY, playW, playH, color.RGBA{R: 0x08, G: 0x08, B: 0x08, A: 0xff})
 
-	ebitenutil.DrawRect(
-		screen,
-		float64(playX),
-		float64(playY),
-		float64(playW),
-		float64(playH),
-		color.RGBA{R: 0x08, G: 0x08, B: 0x08, A: 0xff},
-	)
-
-	// narysuj przewijający się glyph (każdy "piksel" symulowany jako box o szerokości CellSize)
-	// animX kontroluje przesunięcie w px
-	// -- zmiana rozmiaru do 1/4  edytora
-	{
-		off := int(g.animX)
-		animSize := int(float64(CellSize) * AnimCellScale)
-
-		for y := 0; y < GridH; y++ {
-			for x := 0; x < GridW*4; x++ {
-				px := playX + x*animSize + off
-				py := playY + y*animSize
-
-				if px+animSize < playX || px > playX+playW {
-					continue
-				}
-
-				srcX := x % GridW
-				srcY := y
-
-				idx := g.cells[srcY][srcX]
-				if idx != 0 {
-					c := palette[idx]
-					ebitenutil.DrawRect(
-						screen,
-						float64(px+1), float64(py+1),
-						float64(animSize-2), float64(animSize-2),
-						c,
-					)
-				}
+	off := int(g.animX)
+	animSize := int(float64(CellSize) * AnimCellScale)
+	for y := 0; y < GridH; y++ {
+		for x := 0; x < GridW*4; x++ {
+			px := playX + x*animSize + off
+			py := playY + y*animSize
+			if px+animSize < playX || px > playX+playW {
+				continue
+			}
+			srcX := x % GridW
+			srcY := y
+			idx := g.cells[srcY][srcX]
+			if idx != 0 {
+				c := palette[idx]
+				drawRect(screen, px+1, py+1, animSize-2, animSize-2, c)
 			}
 		}
 	}
 
-	// krótka pomoc u dołu
+	// ----------------------
+	// 7. Pomoc u dołu
+	// ----------------------
 	help := "LPM: kliknij komórkę aby zmienić; M: zmiana trybu; C: wyczyść. Kliknij przyciski po prawej."
 	drawText(screen, help, 8, CanvasH-26)
 }
