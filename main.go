@@ -68,7 +68,7 @@ var (
 	}
 )
 
-var version = "0.0.3"
+var version = "0.0.4"
 var fontFace font.Face
 
 const AnimCellScale = 0.25 // 1/4 rozmiaru
@@ -102,6 +102,9 @@ type Game struct {
 	sliderH       int
 	sliderValue   float64 // 0.0 – 1.0
 	sliderGrabbed bool
+
+	// ADD -- kierunek animacji
+	animDir int
 }
 
 func NewGame() *Game {
@@ -119,6 +122,8 @@ func NewGame() *Game {
 	g.sliderW = 300
 	g.sliderH = 14
 	g.sliderValue = 0.5
+	// ADD -- kierunek animacji
+	g.animDir = -1 // domyślnie w lewo
 	return g
 }
 
@@ -165,9 +170,11 @@ func (g *Game) Update() error {
 
 	// animacja
 	if g.animRunning {
-		g.animX -= 60 * ebiten.CurrentTPS() / 60.0 * g.animSpeed
-		if g.animX < -float64(GridW*CellSize) {
+		g.animX += float64(g.animDir) * 60 * ebiten.CurrentTPS() / 60.0 * g.animSpeed
+		if g.animDir < 0 && g.animX < -float64(GridW*CellSize) {
 			g.animX = float64(GridW * CellSize)
+		} else if g.animDir > 0 && g.animX > float64(GridW*CellSize) {
+			g.animX = -float64(GridW * CellSize)
 		}
 	}
 
@@ -228,30 +235,45 @@ func (g *Game) handleLeftClick(x, y int) {
 	btnH := 34
 	pad := 12
 
+	click := func(bx0, by0 int) bool {
+		return bx >= 0 && bx <= btnW && by >= by0 && by <= by0+btnH
+	}
+
+	// początkowa pozycja przycisków
+	by0 := pad
+
 	// 1: Tryb edycji (MONO/TWO/RGB)
-	if bx >= pad && bx <= pad+btnW && by >= pad && by <= pad+btnH {
+	if click(bx, by0) {
 		g.mode = (g.mode + 1) % 3
 		return
 	}
+	by0 += btnH + pad
+
 	// 2: Clear
-	if bx >= pad && bx <= pad+btnW && by >= pad*2+btnH && by <= pad*2+btnH*2 {
+	if click(bx, by0) {
 		g.clear()
 		return
 	}
+	by0 += btnH + pad
+
 	// 3: Export: wybór 1bit/2bit/RGB
-	if bx >= pad && bx <= pad+btnW && by >= pad*3+btnH*2 && by <= pad*3+btnH*3 {
+	if click(bx, by0) {
 		g.exportMode = (g.exportMode + 1) % 3
 		g.updatePreviewText()
 		return
 	}
+	by0 += btnH + pad
+
 	// 4: Format eksportu (C / PROGMEM)
-	if bx >= pad && bx <= pad+btnW && by >= pad*4+btnH*3 && by <= pad*4+btnH*4 {
+	if click(bx, by0) {
 		g.exportFormat = (g.exportFormat + 1) % 2
 		g.updatePreviewText()
 		return
 	}
+	by0 += btnH + pad
+
 	// 5: Export C
-	if bx >= pad && bx <= pad+btnW && by >= pad*5+btnH*4 && by <= pad*5+btnH*5 {
+	if click(bx, by0) {
 		if err := g.exportC(); err != nil {
 			log.Println("Export C failed:", err)
 		} else {
@@ -259,8 +281,10 @@ func (g *Game) handleLeftClick(x, y int) {
 		}
 		return
 	}
+	by0 += btnH + pad
+
 	// 6: Export PROGMEM
-	if bx >= pad && bx <= pad+btnW && by >= pad*6+btnH*5 && by <= pad*6+btnH*6 {
+	if click(bx, by0) {
 		if err := g.exportPROGMEM(); err != nil {
 			log.Println("Export PROGMEM failed:", err)
 		} else {
@@ -268,8 +292,10 @@ func (g *Game) handleLeftClick(x, y int) {
 		}
 		return
 	}
+	by0 += btnH + pad
+
 	// 7: Export PNG
-	if bx >= pad && bx <= pad+btnW && by >= pad*7+btnH*6 && by <= pad*7+btnH*7 {
+	if click(bx, by0) {
 		if err := g.exportPNG(); err != nil {
 			log.Println("Export PNG failed:", err)
 		} else {
@@ -277,16 +303,27 @@ func (g *Game) handleLeftClick(x, y int) {
 		}
 		return
 	}
+	by0 += btnH + pad
+
 	// 8: toggle animacji
-	if bx >= pad && bx <= pad+btnW && by >= pad*8+btnH*7 && by <= pad*8+btnH*8 {
+	if click(bx, by0) {
 		g.animRunning = !g.animRunning
 		if g.animRunning {
 			g.animX = float64(GridW * CellSize)
 		}
 		return
 	}
-	// 9: Generuj podgląd (HEX/BIN)
-	if bx >= pad && bx <= pad+btnW && by >= pad*9+btnH*8 && by <= pad*9+btnH*9 {
+	by0 += btnH + pad
+
+	// 9: toggle kierunku animacji
+	if click(bx, by0) {
+		g.animDir *= -1
+		return
+	}
+	by0 += btnH + pad
+
+	// 10: Generuj podgląd (HEX/BIN)
+	if click(bx, by0) {
 		g.updatePreviewText()
 		return
 	}
@@ -709,6 +746,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	} else {
 		drawText(screen, "Start animacji", bx+8, by+23)
 	}
+	by += btnH + pad
+	ebitenutil.DrawRect(screen, float64(bx), float64(by), float64(btnW), float64(btnH), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	dirText := "Kierunek: "
+	if g.animDir < 0 {
+		dirText += "←"
+	} else {
+		dirText += "→"
+	}
+	drawText(screen, dirText, bx+8, by+23)
 
 	// Generuj podgląd
 	by += btnH + pad
