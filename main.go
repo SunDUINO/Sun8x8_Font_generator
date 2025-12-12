@@ -68,7 +68,7 @@ var (
 	}
 )
 
-var version = "0.0.5"
+var version = "0.0.6"
 var fontFace font.Face
 
 const AnimCellScale = 0.25 // 1/4 rozmiaru
@@ -105,6 +105,10 @@ type Game struct {
 
 	// ADD -- kierunek animacji
 	animDir int
+
+	// --- FONT BUILDER ---
+	glyphs     [][]byte // lista zapisanych znaków, każdy = 8 bajtów
+	glyphIndex int      // aktualny numer znaku
 }
 
 func NewGame() *Game {
@@ -182,6 +186,15 @@ func (g *Game) Update() error {
 	return nil
 }
 
+func (g *Game) addGlyph() {
+	glyph := g.currentGlyph1Bit()
+	g.glyphs = append(g.glyphs, glyph)
+	g.glyphIndex = len(g.glyphs)
+
+	g.clear()
+	g.updateFontPreview()
+}
+
 // obsługa slidera prędkości animacji
 func (g *Game) handleSlider(x, y int) bool {
 	if x >= g.sliderX && x <= g.sliderX+g.sliderW && y >= g.sliderY && y <= g.sliderY+g.sliderH {
@@ -193,6 +206,20 @@ func (g *Game) handleSlider(x, y int) bool {
 
 // obsługa kliknięć: siatka i przyciski
 func (g *Game) handleLeftClick(x, y int) {
+
+	// --- przycisk pod gridem: zapisz znak ---
+	btnX := 12
+	btnY := GridH*CellSize + 12
+	btnW := GridW*CellSize - 24
+	btnH := 32
+
+	if x >= btnX && x <= btnX+btnW &&
+		y >= btnY && y <= btnY+btnH {
+
+		g.addGlyph()
+		return
+	}
+
 	// kliknięcia na siatkę
 	if y < GridH*CellSize {
 		cx := x / CellSize
@@ -232,8 +259,8 @@ func (g *Game) handleLeftClick(x, y int) {
 	bx := x - px
 	by := y - py
 
-	btnW := 180
-	btnH := 34
+	btnW = 180
+	btnH = 34
 	pad := 12
 
 	click := func(bx0, by0 int) bool {
@@ -336,6 +363,44 @@ func (g *Game) clear() {
 			g.cells[y][x] = 0
 		}
 	}
+}
+
+func (g *Game) currentGlyph1Bit() []byte {
+	out := make([]byte, 8)
+	for y := 0; y < GridH; y++ {
+		var row byte
+		for x := 0; x < GridW; x++ {
+			if g.cells[y][x] != 0 {
+				row |= 1 << (7 - x)
+			}
+		}
+		out[y] = row
+	}
+	return out
+}
+
+func (g *Game) updateFontPreview() {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf(
+		"char font8x8[%d][8] = {\n",
+		len(g.glyphs),
+	))
+
+	for i, glyph := range g.glyphs {
+		sb.WriteString("    { ")
+		for j, row := range glyph {
+			sb.WriteString(fmt.Sprintf("0x%02X", row))
+			if j < 7 {
+				sb.WriteString(", ")
+			}
+		}
+		sb.WriteString(fmt.Sprintf(" },  // znak %d\n", i))
+	}
+
+	sb.WriteString("};\n")
+
+	g.previewText = sb.String()
 }
 
 // -----------------------------
@@ -670,6 +735,32 @@ func chooseFilename(prefix, ext string) (string, error) {
 	return path, nil
 }
 
+// podgląd zapisanych znaków ...
+func drawGlyphPreview(
+	screen *ebiten.Image,
+	glyph []byte,
+	x, y int,
+	scale int,
+	col color.Color,
+) {
+	for row := 0; row < 8; row++ {
+		b := glyph[row]
+		for bit := 0; bit < 8; bit++ {
+			if (b & (1 << (7 - bit))) != 0 {
+				rect := ebiten.NewImage(scale, scale)
+				rect.Fill(col)
+
+				op := &ebiten.DrawImageOptions{}
+				op.GeoM.Translate(
+					float64(x+bit*scale),
+					float64(y+row*scale),
+				)
+				screen.DrawImage(rect, op)
+			}
+		}
+	}
+}
+
 // Draw Rysowanie UI i podglądów
 func (g *Game) Draw(screen *ebiten.Image) {
 	// ----------------------
@@ -714,6 +805,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	// 2A --- Przycisk: Dodaj znak ---
+	btnX := 12
+	btnY := GridH*CellSize + 12
+	btnW := GridW*CellSize - 24
+	btnH := 32
+
+	drawRect(screen, btnX, btnY, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawText(
+		screen,
+		fmt.Sprintf("Zapisz znak (%d)", g.glyphIndex),
+		btnX+12,
+		btnY+22,
+	)
+
 	// ----------------------
 	// 3. Suwak prędkości animacji
 	// ----------------------
@@ -730,8 +835,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	y0 := 0
 	drawRect(screen, x0, y0, CanvasW-x0, GridH*CellSize, color.RGBA{R: 0x18, G: 0x18, B: 0x1C, A: 0xff})
 
-	btnW := 180
-	btnH := 34
+	btnW = 180
+	btnH = 34
 	pad := 12
 	bx := x0 + pad
 	by := y0 + pad
@@ -852,6 +957,52 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				drawRect(screen, px+1, py+1, animSize-2, animSize-2, c)
 			}
 		}
+	}
+
+	// ----------------------
+	// 6A. Podgląd zapisanych znaków (glyphs)
+	// ----------------------
+	glyphX := textX
+	glyphY := textY + h + 12
+
+	scale := 3   // powiększenie pojedynczego piksela
+	spacing := 6 // odstęp
+	perRow := 8  // ile znaków w jednym rzędzie
+
+	for i, glyph := range g.glyphs {
+		cx := i % perRow
+		cy := i / perRow
+
+		x := glyphX + cx*(8*scale+spacing)
+		y := glyphY + cy*(8*scale+20)
+
+		// tło miniatury
+		drawRect(
+			screen,
+			x-2,
+			y-2,
+			8*scale+4,
+			8*scale+4,
+			color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff},
+		)
+
+		// sam glyph
+		drawGlyphPreview(
+			screen,
+			glyph,
+			x,
+			y,
+			scale,
+			color.White,
+		)
+
+		// numer znaku (indeks)
+		ebitenutil.DebugPrintAt(
+			screen,
+			fmt.Sprintf("%d", i),
+			x,
+			y+8*scale+2,
+		)
 	}
 
 	// ----------------------
