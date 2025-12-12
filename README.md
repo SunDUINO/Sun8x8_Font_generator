@@ -53,14 +53,14 @@ Suwak pod panelem – kontrola prędkości animacji.<br>
 git clone [https://github.com/TWOJE-USERNAME/Sun8x8.git](https://github.com/SunDUINO/Sun8x8_Font_generator.git)
 cd Sun8x8_Font_generator
 
-```bash
+```
 
 2. Pobierz zależności:
 ```bash
 go mod tidy
-```bash
+```
 
 3. Uruchom program:
 ```bash
 go run .
-```bash
+```
