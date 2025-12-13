@@ -29,22 +29,23 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// ----------------------
-	// 2. Siatka edytora (cells) z przewijaniem
+	// 2. Siatka edytora
 	// ----------------------
-	_, editorH := GridW*CellSize, GridH*CellSize
-
 	for y := 0; y < GridH; y++ {
-		py := y*CellSize - g.cellScroll
-		if py+CellSize < 0 || py > editorH {
-			continue
-		}
 		for x := 0; x < GridW; x++ {
 			px := x * CellSize
+			py := y * CellSize
+
+			// tło komórki
 			drawRect(screen, px+1, py+1, CellSize-2, CellSize-2, color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff})
+
+			// wypełnienie paletą
 			idx := g.cells[y][x]
 			if idx != 0 {
-				drawRect(screen, px+3, py+3, CellSize-6, CellSize-6, palette[idx])
+				c := palette[idx]
+				drawRect(screen, px+3, py+3, CellSize-6, CellSize-6, c)
 			}
+
 			// obramowanie
 			drawRect(screen, px, py, CellSize, 1, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
 			drawRect(screen, px, py+CellSize-1, CellSize, 1, color.RGBA{R: 0x44, G: 0x44, B: 0x50, A: 0xff})
@@ -53,15 +54,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	// ----------------------
-	// 2A. Przycisk: Dodaj znak
-	// ----------------------
+	// 2A --- Przycisk: Dodaj znak ---
 	btnX := 12
 	btnY := GridH*CellSize + 12
 	btnW := GridW*CellSize - 24
 	btnH := 32
+
 	drawRect(screen, btnX, btnY, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
-	drawText(screen, fmt.Sprintf("Zapisz znak (%d)", g.glyphIndex), btnX+12, btnY+22)
+	drawText(
+		screen,
+		fmt.Sprintf("Zapisz znak (%d)", g.glyphIndex),
+		btnX+12,
+		btnY+22,
+	)
 
 	// ----------------------
 	// 3. Suwak prędkości animacji
@@ -73,7 +78,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	drawRect(screen, handleX-4, g.sliderY-2, 8, g.sliderH+4, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
 
 	// ----------------------
-	// 4. Panel po prawej: tło i przyciski
+	// 4. Panel po prawej - tło i przyciski
 	// ----------------------
 	x0 := GridW * CellSize
 	y0 := 0
@@ -85,50 +90,89 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	bx := x0 + pad
 	by := y0 + pad
 
-	buttons := []struct {
-		label string
-		color color.RGBA
-	}{
-		{fmt.Sprintf("Tryb: %s (M)", g.modeLabel()), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff}},
-		{"Wyczyść (C)", color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff}},
-		{fmt.Sprintf("Eksport: %s", g.exportModeLabel()), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff}},
-		{fmt.Sprintf("Format: %s", g.exportFormatLabel()), color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff}},
-		{"Eksportuj C", color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff}},
-		{"Eksportuj PROGMEM", color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff}},
-		{"Eksportuj PNG", color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff}},
-		{"Start/Stop animacji", color.RGBA{R: 0x60, G: 0x60, B: 0x60, A: 0xff}},
-		{"Kierunek animacji", color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff}},
-		{"Podgląd HEX/BIN", color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff}},
+	// Tryb edycji
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, fmt.Sprintf("Tryb: %s (M)", g.modeLabel()), bx+8, by+23)
+
+	// Clear
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, "Wyczyść (C)", bx+8, by+23)
+
+	// Eksport: tryb
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, fmt.Sprintf("Eksport: %s", g.exportModeLabel()), bx+8, by+23)
+
+	// Eksport: format
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, fmt.Sprintf("Format: %s", g.exportFormatLabel()), bx+8, by+23)
+
+	// Export C
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawText(screen, "Eksportuj C", bx+8, by+23)
+
+	// Export PROGMEM
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawText(screen, "Eksportuj PROGMEM", bx+8, by+23)
+
+	// Export PNG
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
+	drawText(screen, "Eksportuj PNG", bx+8, by+26)
+
+	// Toggle animacji
+	by += btnH + pad
+	col := color.RGBA{R: 0x60, G: 0x60, B: 0x60, A: 0xff}
+	if g.animRunning {
+		col = color.RGBA{R: 0x34, G: 0xC7, B: 0x34, A: 0xff}
+	}
+	drawRect(screen, bx, by, btnW, btnH, col)
+	if g.animRunning {
+		drawText(screen, "Stop animacji", bx+8, by+23)
+	} else {
+		drawText(screen, "Start animacji", bx+8, by+23)
 	}
 
-	for _, b := range buttons {
-		col := b.color
-		lbl := b.label
-		if lbl == "Start/Stop animacji" && g.animRunning {
-			col = color.RGBA{R: 0x34, G: 0xC7, B: 0x34, A: 0xff}
-		}
-		drawRect(screen, bx, by, btnW, btnH, col)
-		drawText(screen, lbl, bx+8, by+23)
-		by += btnH + pad
+	// Kierunek animacji
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	dirText := "Kierunek: "
+	if g.animDir < 0 {
+		dirText += "←"
+	} else {
+		dirText += "→"
 	}
+	drawText(screen, dirText, bx+8, by+23)
 
-	drawText(screen, fmt.Sprintf("Plik: %s", g.lastExport), bx, by+10)
+	// Podgląd HEX/BIN
+	by += btnH + pad
+	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	drawText(screen, "Podgląd HEX/BIN", bx+8, by+23)
+
+	// Informacja o ostatnim eksporcie
+	drawText(screen, fmt.Sprintf("Plik: %s", g.lastExport), bx, by+btnH+pad+10)
 
 	// ----------------------
-	// 5. Podgląd tablicy C z przewijaniem
+	// 5. Panel tekstowy z prawej - previewText
 	// ----------------------
 	textX := x0 + btnW + pad*2
 	textY := pad
-	textW := CanvasW - textX - pad
-	textH := CanvasH - textY - pad - 120
-	drawRect(screen, textX, textY, textW, textH, color.RGBA{R: 0x0E, G: 0x0E, B: 0x10, A: 0xff})
-	g.textViewH = textH
+	w := CanvasW - textX - pad
+	h := CanvasH - textY - pad - 120
+	drawRect(screen, textX, textY, w, h, color.RGBA{R: 0x0E, G: 0x0E, B: 0x10, A: 0xff})
 
-	yline := textY + 6 - g.textScroll
-	for _, ln := range strings.Split(g.previewText, "\n") {
-		if yline+12 < textY || yline > textY+textH {
-			yline += 12
-			continue
+	lines := strings.Split(g.previewText, "\n")
+	yline := textY + 6
+	for i, ln := range lines {
+		if i > 30 {
+			break
+		}
+		if len(ln) > 80 {
+			ln = ln[:80] + "..."
 		}
 		ebitenutil.DebugPrintAt(screen, ln, textX+6, yline)
 		yline += 12
@@ -145,8 +189,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	playH := int(float64(CellSize) * scaleH)
 	drawRect(screen, playX, playY, playW, playH, color.RGBA{R: 0x08, G: 0x08, B: 0x08, A: 0xff})
 
-	animSize := int(float64(CellSize) * AnimCellScale)
 	off := int(g.animX)
+	animSize := int(float64(CellSize) * AnimCellScale)
 	for y := 0; y < GridH; y++ {
 		for x := 0; x < GridW*4; x++ {
 			px := playX + x*animSize + off
@@ -154,37 +198,60 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			if px+animSize < playX || px > playX+playW {
 				continue
 			}
-			idx := g.cells[y][x%GridW]
+			srcX := x % GridW
+			srcY := y
+			idx := g.cells[srcY][srcX]
 			if idx != 0 {
-				drawRect(screen, px+1, py+1, animSize-2, animSize-2, palette[idx])
+				c := palette[idx]
+				drawRect(screen, px+1, py+1, animSize-2, animSize-2, c)
 			}
 		}
 	}
 
 	// ----------------------
-	// 6A. Podgląd zapisanych glyphów z przewijaniem
+	// 6A. Podgląd zapisanych znaków (glyphs)
 	// ----------------------
 	glyphX := textX
-	glyphY := textY + textH + 12
-	//glyphW := textW
-	glyphH := CanvasH - glyphY - 40
-	g.glyphViewH = glyphH
-	scale := 3   // <-- tutaj deklaracja przed użyciem
-	spacing := 6 // <-- tutaj deklaracja przed użyciem
-	perRow := 8
+	glyphY := textY + h + 12
 
-	startY := 6 - g.glyphScroll
+	scale := 3   // powiększenie pojedynczego piksela
+	spacing := 6 // odstęp
+	perRow := 8  // ile znaków w jednym rzędzie
+
 	for i, glyph := range g.glyphs {
 		cx := i % perRow
 		cy := i / perRow
+
 		x := glyphX + cx*(8*scale+spacing)
-		y := startY + cy*(8*scale+20)
-		if y+8*scale < glyphY || y > glyphY+glyphH {
-			continue
-		}
-		drawRect(screen, x-2, y-2, 8*scale+4, 8*scale+4, color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff})
-		drawGlyphPreview(screen, glyph, x, y, scale, color.White)
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", i), x, y+8*scale+2)
+		y := glyphY + cy*(8*scale+20)
+
+		// tło miniatury
+		drawRect(
+			screen,
+			x-2,
+			y-2,
+			8*scale+4,
+			8*scale+4,
+			color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff},
+		)
+
+		// sam glyph
+		drawGlyphPreview(
+			screen,
+			glyph,
+			x,
+			y,
+			scale,
+			color.White,
+		)
+
+		// numer znaku (indeks)
+		ebitenutil.DebugPrintAt(
+			screen,
+			fmt.Sprintf("%d", i),
+			x,
+			y+8*scale+2,
+		)
 	}
 
 	// ----------------------
