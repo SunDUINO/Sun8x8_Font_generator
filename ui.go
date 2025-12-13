@@ -112,7 +112,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Export C
 	by += btnH + pad
 	drawRect(screen, bx, by, btnW, btnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
-	drawText(screen, "Eksportuj C", bx+8, by+23)
+	drawText(screen, "Eksportuj C (E)", bx+8, by+23)
 
 	// Export PROGMEM
 	by += btnH + pad

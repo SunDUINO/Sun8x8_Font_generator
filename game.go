@@ -132,6 +132,15 @@ func (g *Game) Update() error {
 		g.clear()
 		time.Sleep(120 * time.Millisecond)
 	}
+	if ebiten.IsKeyPressed(ebiten.KeyE) {
+		err := g.exportC()
+		if err != nil {
+			g.lastExport = "Błąd zapisu pliku"
+		} else {
+			g.lastExport = "Plik znaki.h zapisany w katalogu export"
+		}
+		time.Sleep(200 * time.Millisecond) // debounce
+	}
 
 	if g.animRunning {
 		g.animX += float64(g.animDir) * g.animSpeed * 40.0
@@ -215,31 +224,30 @@ func (g *Game) handleLeftClick(x, y int) {
 	// panel prawy
 	px := GridW * CellSize
 	bx := x - px
-	by := y
-
+	by0 := 12 // początek pierwszego przycisku
 	btnW = 180
 	btnH = 34
 	pad := 12
 
-	click := func(by0 int) bool {
-		return bx >= 0 && bx <= btnW &&
-			by >= by0 && by <= by0+btnH
+	click := func(by int) bool {
+		return bx >= 0 && bx <= btnW && y >= by && y <= by+btnH
 	}
 
-	by0 := pad
-
+	// 1. Tryb
 	if click(by0) {
 		g.mode = (g.mode + 1) % 3
 		return
 	}
 	by0 += btnH + pad
 
+	// 2. Clear
 	if click(by0) {
 		g.clear()
 		return
 	}
 	by0 += btnH + pad
 
+	// 3. Eksport: tryb
 	if click(by0) {
 		g.exportMode = (g.exportMode + 1) % 3
 		g.updatePreviewText()
@@ -247,6 +255,7 @@ func (g *Game) handleLeftClick(x, y int) {
 	}
 	by0 += btnH + pad
 
+	// 4. Eksport: format
 	if click(by0) {
 		g.exportFormat = (g.exportFormat + 1) % 2
 		g.updatePreviewText()
@@ -254,24 +263,35 @@ func (g *Game) handleLeftClick(x, y int) {
 	}
 	by0 += btnH + pad
 
+	// 5. Eksport C
 	if click(by0) {
-		_ = g.exportC()
+		if err := g.exportC(); err != nil {
+			g.lastExport = "Błąd eksportu C"
+		}
+		return
+
+	}
+	by0 += btnH + pad
+
+	// 6. Eksport PROGMEM
+	if click(by0) {
+		if err := g.exportPROGMEM(); err != nil {
+			g.lastExport = "Błąd eksportu PROGMEM"
+		}
 		return
 	}
 	by0 += btnH + pad
 
+	// 7. Eksport PNG
 	if click(by0) {
-		_ = g.exportPROGMEM()
+		if err := g.exportPNG(); err != nil {
+			g.lastExport = "Błąd eksportu PNG"
+		}
 		return
 	}
 	by0 += btnH + pad
 
-	if click(by0) {
-		_ = g.exportPNG()
-		return
-	}
-	by0 += btnH + pad
-
+	// 8. Animacja start/stop
 	if click(by0) {
 		g.animRunning = !g.animRunning
 		if g.animRunning {
@@ -281,16 +301,19 @@ func (g *Game) handleLeftClick(x, y int) {
 	}
 	by0 += btnH + pad
 
+	// 9. Zmiana kierunku animacji
 	if click(by0) {
 		g.animDir *= -1
 		return
 	}
 	by0 += btnH + pad
 
+	// 10. Podgląd HEX/BIN
 	if click(by0) {
 		g.updatePreviewText()
 		return
 	}
+
 	_, wy := ebiten.Wheel()
 	if wy != 0 {
 		x, y := ebiten.CursorPosition()
