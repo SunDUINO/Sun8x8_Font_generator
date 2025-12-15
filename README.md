@@ -4,6 +4,11 @@
 **Forum:** [https://forum.lothar-team.pl/](https://forum.lothar-team.pl/)  
 **Wersja:** 0.0.3
 
+<img width="554" height="1066" alt="Zrzut ekranu 2025-12-15 174100" src="https://github.com/user-attachments/assets/758a5525-8eeb-4f19-af16-933b571560f1" />
+
+<img width="732" height="664" alt="Zrzut ekranu 2025-12-12 220012" src="https://github.com/user-attachments/assets/4d539142-9518-4bc4-839c-5c4b6017d37b" />
+
+
 ---
 
 ## Opis
