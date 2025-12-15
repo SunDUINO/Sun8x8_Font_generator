@@ -48,10 +48,6 @@ func (s *SerialMatrix) Close() {
 
 // SendFrame - konwersja 8x8 (lub NxM) komórek na bajty
 func (s *SerialMatrix) SendFrame(cells [][]int) error {
-	if s.port == nil {
-		return fmt.Errorf("port nieotwarty")
-	}
-
 	frame := make([]byte, s.height)
 	for y := 0; y < s.height; y++ {
 		var b byte
@@ -63,9 +59,12 @@ func (s *SerialMatrix) SendFrame(cells [][]int) error {
 		frame[y] = b
 	}
 
-	_, err := s.port.Write(frame)
-	if err != nil {
-		return err
+	if s.port != nil {
+		_, err := s.port.Write(frame)
+		if err != nil {
+			fmt.Println("Błąd wysyłki do matrycy:", err)
+			return err
+		}
 	}
 	return nil
 }

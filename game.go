@@ -140,7 +140,7 @@ func (g *Game) Update() error {
 	}
 
 	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
-	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
+
 	if matrixSerial != nil {
 		err := matrixSerial.SendFrame(g.cellsToSlice())
 		if err != nil {
