@@ -17,7 +17,7 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
-var version = "0.0.8"
+var version = "0.0.9"
 var fontFace font.Face
 
 func main() {
@@ -47,10 +47,17 @@ func main() {
 
 	g.updatePreviewText()
 
+	//if err := ebiten.RunGame(g); err != nil {
+	//	log.Fatal(err)
+	//}
+
+	// zamykamy port na koniec programu
+	// zabezpieczenie przy zamykaniu serial
+	if matrixSerial != nil {
+		defer matrixSerial.Close()
+	}
+
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
-
-	// zamykamy port na koniec programu
-	defer matrixSerial.Close()
 }

@@ -75,6 +75,7 @@ type Game struct {
 
 	cellScroll int // scroll siatki edytora
 
+	serialStatus string
 }
 
 var matrixSerial *SerialMatrix
@@ -97,7 +98,15 @@ func NewGame() *Game {
 	g.animDir = -1
 
 	// ------ tutaj inicjalizacja serial -------
-	matrixSerial = NewSerialMatrix("COM13", GridW, GridH)
+	//matrixSerial = NewSerialMatrix("COM13", GridW, GridH)
+	port := detectSerialPort()
+	matrixSerial = NewSerialMatrix(port, GridW, GridH)
+
+	if matrixSerial != nil {
+		g.serialStatus = "Podłączono do: " + port
+	} else {
+		g.serialStatus = "Brak połączenia z Pico"
+	}
 
 	return g
 }
@@ -131,8 +140,29 @@ func (g *Game) Update() error {
 	}
 
 	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
+	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
 	if matrixSerial != nil {
-		matrixSerial.SendFrame(g.cellsToSlice())
+		err := matrixSerial.SendFrame(g.cellsToSlice())
+		if err != nil {
+			matrixSerial.Close()
+			matrixSerial = nil
+			g.serialStatus = "Odłączono"
+		}
+	}
+
+	// jeśli brak połączenia, próbuj reconnect
+	if matrixSerial == nil {
+		port := detectSerialPort() // twoja funkcja wykrywająca COM
+		if port != "" {
+			matrixSerial = NewSerialMatrix(port, GridW, GridH)
+			if matrixSerial != nil {
+				g.serialStatus = "Podłączono " + port
+			} else {
+				g.serialStatus = "Nie można otworzyć portu"
+			}
+		} else {
+			g.serialStatus = "Brak Pico"
+		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyM) {

@@ -255,10 +255,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// ----------------------
+	// 6B. Status Serial
+	// ----------------------
+	statusY := CanvasH - 40
+	if g.serialStatus != "" {
+		text.Draw(screen, "Serial: "+g.serialStatus, fontFace, 8, statusY, color.White)
+	}
+
+	// ----------------------
 	// 7. Pomoc u dołu
 	// ----------------------
+	helpY := CanvasH - 20
 	help := "LPM: kliknij komórkę aby zmienić; M: zmiana trybu; C: wyczyść. Kliknij przyciski po prawej."
-	drawText(screen, help, 8, CanvasH-26)
+	text.Draw(screen, help, fontFace, 8, helpY, color.White)
 }
 
 func drawGlyphPreview(

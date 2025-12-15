@@ -7,16 +7,29 @@ import (
 )
 
 type SerialMatrix struct {
-	port   *serial.Port
-	width  int
-	height int
+	port     *serial.Port
+	portName string
+	width    int
+	height   int
 }
 
 func NewSerialMatrix(portName string, width, height int) *SerialMatrix {
-	c, err := serial.OpenPort(&serial.Config{Name: portName, Baud: 115200})
-	if err != nil {
-		panic(fmt.Sprintf("Nie można otworzyć portu %s: %v", portName, err))
+	if portName == "" {
+		fmt.Println("Serial: brak portu")
+		return nil
 	}
+
+	c, err := serial.OpenPort(&serial.Config{
+		Name: portName,
+		Baud: 115200,
+	})
+	if err != nil {
+		fmt.Println("Serial: nie można otworzyć", portName)
+		return nil
+	}
+
+	fmt.Println("Serial: podłączono", portName)
+
 	return &SerialMatrix{
 		port:   c,
 		width:  width,
@@ -26,12 +39,19 @@ func NewSerialMatrix(portName string, width, height int) *SerialMatrix {
 
 func (s *SerialMatrix) Close() {
 	if s.port != nil {
-		s.port.Close()
+		if err := s.port.Close(); err != nil {
+			fmt.Println("Warning: nie udało się zamknąć portu:", err)
+		}
+		s.port = nil
 	}
 }
 
 // SendFrame - konwersja 8x8 (lub NxM) komórek na bajty
-func (s *SerialMatrix) SendFrame(cells [][]int) {
+func (s *SerialMatrix) SendFrame(cells [][]int) error {
+	if s.port == nil {
+		return fmt.Errorf("port nieotwarty")
+	}
+
 	frame := make([]byte, s.height)
 	for y := 0; y < s.height; y++ {
 		var b byte
@@ -42,10 +62,10 @@ func (s *SerialMatrix) SendFrame(cells [][]int) {
 		}
 		frame[y] = b
 	}
-	if s.port != nil {
-		_, err := s.port.Write(frame)
-		if err != nil {
-			fmt.Println("Błąd wysyłki:", err)
-		}
+
+	_, err := s.port.Write(frame)
+	if err != nil {
+		return err
 	}
+	return nil
 }

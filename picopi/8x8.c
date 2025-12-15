@@ -1,12 +1,3 @@
-// ----------------------------------------------------------------------------------
-//
-// Generator czcionek 8x8 dla matryc LED (Ebiten)
-// Autor:  SunRiver / Lothar TeaM
-// Strona: https://forum.lothar-team.pl/
-// Program dla picopi
-//
-// ----------------------------------------------------------------------------------
-
 #include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
@@ -60,8 +51,17 @@ void max7219_draw(uint8_t *frame)
 // -------- main --------
 int main()
 {
+	
 	stdio_init_all(); // USB CDC
 	sleep_ms(500); // poczekaj na inicjalizację USB
+	
+	while (true) {
+		int c = getchar_timeout_us(0);
+		if (c == 0xAA) {
+			putchar_raw(0x55); // odpowiedź handshake
+			break;
+		}
+	}
 
 	spi_init(SPI_PORT, 10 * 1000 * 1000);
 	gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
