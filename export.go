@@ -18,7 +18,10 @@ import (
 // eksport czystego C - zależnie od exportMode
 func (g *Game) exportC() error {
 
-	text := GenerateCFromGlyphs(g.glyphs, g.exportMode, false)
+	text := GenerateCFromGlyphs(
+		g.glyphs,
+		g.exportMode,
+		false)
 
 	g.previewText = text
 

@@ -77,6 +77,8 @@ type Game struct {
 
 }
 
+var matrixSerial *SerialMatrix
+
 func NewGame() *Game {
 	g := &Game{}
 	g.mode = ModeMono
@@ -93,6 +95,10 @@ func NewGame() *Game {
 
 	g.animSpeed = 0.5
 	g.animDir = -1
+
+	// ------ tutaj inicjalizacja serial -------
+	matrixSerial = NewSerialMatrix("COM13", GridW, GridH)
+
 	return g
 }
 
@@ -124,6 +130,11 @@ func (g *Game) Update() error {
 		g.sliderGrabbed = false
 	}
 
+	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
+	if matrixSerial != nil {
+		matrixSerial.SendFrame(g.cellsToSlice())
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyM) {
 		g.mode = (g.mode + 1) % 3
 		time.Sleep(140 * time.Millisecond)
@@ -149,6 +160,7 @@ func (g *Game) Update() error {
 		} else if g.animDir > 0 && g.animX > float64(GridW*CellSize) {
 			g.animX = -float64(GridW * CellSize)
 		}
+
 	}
 
 	return nil
@@ -335,6 +347,17 @@ func (g *Game) handleLeftClick(x, y int) {
 		}
 	}
 
+}
+
+func (g *Game) cellsToSlice() [][]int {
+	s := make([][]int, GridH)
+	for y := 0; y < GridH; y++ {
+		s[y] = make([]int, GridW)
+		for x := 0; x < GridW; x++ {
+			s[y][x] = g.cells[y][x]
+		}
+	}
+	return s
 }
 
 func (g *Game) modeLabel() string {
