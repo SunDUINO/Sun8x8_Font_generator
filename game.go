@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -238,28 +239,45 @@ func (g *Game) handleLeftClick(x, y int) {
 	}
 
 	// --- przyciski przewijania zapisanych znaków ---
-	scrollBtnW := 40
-	scrollBtnH := 32
-	scrollPad := 8
+	btnPrevX := btnX
+	btnPrevY := btnY + btnH + 8
+	btnPrevW := 60
+	btnPrevH := 28
 
-	// Poprzedni
-	if x >= btnX && x <= btnX+scrollBtnW &&
-		y >= btnY+btnH+scrollPad && y <= btnY+btnH+scrollPad+scrollBtnH {
-		g.glyphViewOfs--
-		if g.glyphViewOfs < 0 {
-			g.glyphViewOfs = 0
+	btnNextX := btnPrevX + btnPrevW + 8
+	btnNextY := btnPrevY
+	btnNextW := 60
+	btnNextH := 28
+
+	// Poprzedni znak
+	if x >= btnPrevX && x <= btnPrevX+btnPrevW &&
+		y >= btnPrevY && y <= btnPrevY+btnPrevH {
+		fmt.Println("Poprzedni klik:", x, y)
+		if g.activeGlyph > 0 {
+			g.activeGlyph--
+			g.glyphIndex = g.activeGlyph
+			g.loadGlyphToGrid(g.activeGlyph)
+
+			// przesuwamy widok, jeśli aktywny znak wychodzi poza 8-znakowy widok
+			if g.activeGlyph < g.glyphViewOfs {
+				g.glyphViewOfs = g.activeGlyph
+			}
 		}
 		return
 	}
 
-	// Następny
-	if x >= btnX+btnW-scrollBtnW && x <= btnX+btnW &&
-		y >= btnY+btnH+scrollPad && y <= btnY+btnH+scrollPad+scrollBtnH {
-		g.glyphViewOfs++
-		if g.glyphViewOfs > len(g.glyphs)-8 {
-			g.glyphViewOfs = len(g.glyphs) - 8
-			if g.glyphViewOfs < 0 {
-				g.glyphViewOfs = 0
+	// Następny znak
+	if x >= btnNextX && x <= btnNextX+btnNextW &&
+		y >= btnNextY && y <= btnNextY+btnNextH {
+		fmt.Println("Następny klik:", x, y)
+		if g.activeGlyph < len(g.glyphs)-1 {
+			g.activeGlyph++
+			g.glyphIndex = g.activeGlyph
+			g.loadGlyphToGrid(g.activeGlyph)
+
+			// przesuwamy widok jeśli aktywny znak wychodzi poza 8-znakowy widok
+			if g.activeGlyph >= g.glyphViewOfs+8 {
+				g.glyphViewOfs = g.activeGlyph - 7
 			}
 		}
 		return
@@ -455,6 +473,36 @@ func (g *Game) buildDisplayFrame() [][]int {
 	}
 
 	return frame
+}
+
+func (g *Game) loadGlyphToGrid(idx int) {
+	if idx < 0 || idx >= len(g.glyphs) {
+		return
+	}
+	glyph := g.glyphs[idx]
+	for y := 0; y < GridH; y++ {
+		row := glyph[y]
+		for x := 0; x < GridW; x++ {
+			if (row & (1 << (7 - x))) != 0 {
+				g.cells[y][x] = 1
+			} else {
+				g.cells[y][x] = 0
+			}
+		}
+	}
+
+	// odśwież wyświetlane glyphy w matrycach M1–M3
+	g.updateDisplayGlyphs()
+}
+
+func (g *Game) updateDisplayGlyphs() {
+	g.displayGlyphs = [][]byte{}
+	for i := 0; i < 3; i++ {
+		idx := g.activeGlyph + i - 2 // M1 = poprzedni, M2 = kolejny...
+		if idx >= 0 && idx < len(g.glyphs) && idx != g.activeGlyph {
+			g.displayGlyphs = append(g.displayGlyphs, g.glyphs[idx])
+		}
+	}
 }
 
 func (g *Game) modeLabel() string {

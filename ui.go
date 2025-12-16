@@ -69,17 +69,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	)
 
 	// 2B --- Przyciski nawigacji po zapisanych znakach
-	scrollBtnW := 40
-	scrollBtnH := 32
-	scrollPad := 8
+	btnPrevX := btnX
+	btnPrevY := btnY + btnH + 8
+	btnPrevW := 60
+	btnPrevH := 28
 
-	// Poprzedni
-	drawRect(screen, btnX, btnY+btnH+scrollPad, scrollBtnW, scrollBtnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
-	drawText(screen, "<<", btnX+12, btnY+btnH+scrollPad+22)
+	drawRect(screen, btnPrevX, btnPrevY, btnPrevW, btnPrevH, color.RGBA{R: 0x66, G: 0x66, B: 0x66, A: 0xff})
+	drawText(screen, "<<", btnPrevX+20, btnPrevY+20)
 
-	// Następny
-	drawRect(screen, btnX+btnW-scrollBtnW, btnY+btnH+scrollPad, scrollBtnW, scrollBtnH, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
-	drawText(screen, ">>", btnX+btnW-scrollBtnW+12, btnY+btnH+scrollPad+22)
+	btnNextX := btnPrevX + btnPrevW + 8
+	btnNextY := btnPrevY
+	btnNextW := 60
+	btnNextH := 28
+
+	drawRect(screen, btnNextX, btnNextY, btnNextW, btnNextH, color.RGBA{R: 0x66, G: 0x66, B: 0x66, A: 0xff})
+	drawText(screen, ">>", btnNextX+20, btnNextY+20)
 
 	// ----------------------
 	// 3. Suwak prędkości animacji
