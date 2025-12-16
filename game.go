@@ -237,6 +237,34 @@ func (g *Game) handleLeftClick(x, y int) {
 		return
 	}
 
+	// --- przyciski przewijania zapisanych znaków ---
+	scrollBtnW := 40
+	scrollBtnH := 32
+	scrollPad := 8
+
+	// Poprzedni
+	if x >= btnX && x <= btnX+scrollBtnW &&
+		y >= btnY+btnH+scrollPad && y <= btnY+btnH+scrollPad+scrollBtnH {
+		g.glyphViewOfs--
+		if g.glyphViewOfs < 0 {
+			g.glyphViewOfs = 0
+		}
+		return
+	}
+
+	// Następny
+	if x >= btnX+btnW-scrollBtnW && x <= btnX+btnW &&
+		y >= btnY+btnH+scrollPad && y <= btnY+btnH+scrollPad+scrollBtnH {
+		g.glyphViewOfs++
+		if g.glyphViewOfs > len(g.glyphs)-8 {
+			g.glyphViewOfs = len(g.glyphs) - 8
+			if g.glyphViewOfs < 0 {
+				g.glyphViewOfs = 0
+			}
+		}
+		return
+	}
+
 	// kliknięcia na siatkę
 	if y < GridH*CellSize {
 		cx := x / CellSize

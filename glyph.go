@@ -37,6 +37,8 @@ func (g *Game) addGlyph() {
 		}
 	}
 
+	g.glyphIndex = g.activeGlyph
+
 	// wyczyść edytor
 	g.clear()
 
