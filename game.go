@@ -397,21 +397,25 @@ func (g *Game) cellsToSlice() [][]int {
 	return s
 }
 
+// buildDisplayFrame tworzy pełną ramkę do wyświetlenia na matrycach
 func (g *Game) buildDisplayFrame() [][]int {
 	frame := make([][]int, 8)
 	for y := 0; y < 8; y++ {
 		frame[y] = make([]int, 32) // 4 matryce po 8 kolumn
 	}
 
-	// M0 – aktualnie edytowany znak
+	// M0 – aktualnie edytowany znak (kolumny 0–7)
 	for y := 0; y < 8; y++ {
 		for x := 0; x < 8; x++ {
 			frame[y][x] = g.cells[y][x]
 		}
 	}
 
-	// M1–M3 – zapisane znaki
+	// M1–M3 – zapisane znaki (wykorzystujemy tylko g.displayGlyphs)
 	for i, glyph := range g.displayGlyphs {
+		if i >= 3 {
+			break
+		}
 		for y := 0; y < 8; y++ {
 			b := glyph[y]
 			for bit := 0; bit < 8; bit++ {

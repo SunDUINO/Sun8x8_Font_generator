@@ -17,7 +17,7 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
-var version = "0.0.11"
+var version = "0.0.12"
 var fontFace font.Face
 
 func main() {

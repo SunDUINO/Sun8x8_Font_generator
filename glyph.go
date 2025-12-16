@@ -12,32 +12,33 @@ func (g *Game) addGlyph() {
 }
 */
 
+// addGlyph dodaje aktualny znak do listy glyphów, przesuwa wyświetlane znaki
+// i wyczyści edytor
 func (g *Game) addGlyph() {
 	glyph := g.currentGlyph1Bit()
 
-	// dodaj znak do listy zapisanych
+	// dodaj znak do pełnej listy
 	g.glyphs = append(g.glyphs, glyph)
 
 	// ustaw aktywny znak (ostatnio zapisany)
 	g.activeGlyph = len(g.glyphs) - 1
 
-	// przesuwaj okno podglądu (max 8 znaków)
+	// przesuwamy okno podglądu (max 8 znaków)
 	if g.activeGlyph >= g.glyphViewOfs+8 {
 		g.glyphViewOfs = g.activeGlyph - 7
 	}
 
-	// wyczyść edytor (M0)
-	g.clear()
+	// aktualizujemy wyświetlane znaki (dla matryc M1–M3)
+	g.displayGlyphs = [][]byte{}
+	for i := 0; i < 3; i++ {
+		idx := g.activeGlyph + i - 2 // M1 = poprzedni, M2 = kolejny...
+		if idx >= 0 && idx < len(g.glyphs) && idx != g.activeGlyph {
+			g.displayGlyphs = append(g.displayGlyphs, g.glyphs[idx])
+		}
+	}
 
-	// zaktualizuj displayGlyphs – tylko poprzednie 3 znaki na M1–M3
-	g.displayGlyphs = nil
-	start := len(g.glyphs) - 4
-	if start < 0 {
-		start = 0
-	}
-	if len(g.glyphs) > 1 {
-		g.displayGlyphs = g.glyphs[start : len(g.glyphs)-1]
-	}
+	// wyczyść edytor
+	g.clear()
 
 	// odśwież preview fontu
 	g.updateFontPreview()
