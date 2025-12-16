@@ -76,6 +76,10 @@ type Game struct {
 	cellScroll int // scroll siatki edytora
 
 	serialStatus string
+
+	activeGlyph   int      // aktualnie wybrany znak
+	glyphViewOfs  int      // offset podglądu (0,1,2... → okno 8 znaków)
+	displayGlyphs [][]byte // max 4 glyphy po 8 bajtów
 }
 
 var matrixSerial *SerialMatrix
@@ -107,6 +111,9 @@ func NewGame() *Game {
 	} else {
 		g.serialStatus = "Brak połączenia z Pico"
 	}
+
+	g.activeGlyph = -1
+	g.glyphViewOfs = 0
 
 	return g
 }
@@ -142,7 +149,7 @@ func (g *Game) Update() error {
 	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
 
 	if matrixSerial != nil {
-		err := matrixSerial.SendFrame(g.cellsToSlice())
+		err := matrixSerial.SendFrame(g.buildDisplayFrame())
 		if err != nil {
 			matrixSerial.Close()
 			matrixSerial = nil
@@ -388,6 +395,34 @@ func (g *Game) cellsToSlice() [][]int {
 		}
 	}
 	return s
+}
+
+func (g *Game) buildDisplayFrame() [][]int {
+	frame := make([][]int, 8)
+	for y := 0; y < 8; y++ {
+		frame[y] = make([]int, 32) // 4 matryce po 8 kolumn
+	}
+
+	// M0 – aktualnie edytowany znak
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			frame[y][x] = g.cells[y][x]
+		}
+	}
+
+	// M1–M3 – zapisane znaki
+	for i, glyph := range g.displayGlyphs {
+		for y := 0; y < 8; y++ {
+			b := glyph[y]
+			for bit := 0; bit < 8; bit++ {
+				if (b & (1 << (7 - bit))) != 0 {
+					frame[y][(i+1)*8+bit] = 1
+				}
+			}
+		}
+	}
+
+	return frame
 }
 
 func (g *Game) modeLabel() string {

@@ -216,14 +216,24 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	scale := 3   // powiększenie pojedynczego piksela
 	spacing := 6 // odstęp
-	perRow := 8  // ile znaków w jednym rzędzie
+	//perRow := 8  // ile znaków w jednym rzędzie
 
-	for i, glyph := range g.glyphs {
-		cx := i % perRow
-		cy := i / perRow
+	// ile glyphów pokazujemy naraz
+	const glyphsPerView = 8
 
+	start := g.glyphViewOfs
+	end := start + glyphsPerView
+	if end > len(g.glyphs) {
+		end = len(g.glyphs)
+	}
+
+	for i := start; i < end; i++ {
+		glyph := g.glyphs[i]
+
+		// pozycja tylko w jednym wierszu
+		cx := i - start
 		x := glyphX + cx*(8*scale+spacing)
-		y := glyphY + cy*(8*scale+20)
+		y := glyphY
 
 		// tło miniatury
 		drawRect(
@@ -235,6 +245,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			color.RGBA{R: 0x22, G: 0x22, B: 0x26, A: 0xff},
 		)
 
+		// podświetlenie aktywnego znaku
+		if i == g.activeGlyph {
+			drawRect(
+				screen,
+				x-4,
+				y-4,
+				8*scale+8,
+				8*scale+8,
+				color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff},
+			)
+		}
+
 		// sam glyph
 		drawGlyphPreview(
 			screen,
@@ -245,7 +267,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			color.White,
 		)
 
-		// numer znaku (indeks)
+		// numer znaku
 		ebitenutil.DebugPrintAt(
 			screen,
 			fmt.Sprintf("%d", i),
