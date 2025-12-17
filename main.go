@@ -4,6 +4,8 @@
 // Autor:  SunRiver / Lothar TeaM
 // Strona: https://forum.lothar-team.pl/
 //
+//
+//
 // ----------------------------------------------------------------------------------
 
 package main
@@ -17,8 +19,9 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
-var version = "0.0.14"
+var version = "0.0.15"
 var fontFace font.Face
+var appName = "Sun8x8 - Generator czcionek 8x8 wer: "
 
 func main() {
 	// Wczytujemy czcionkę obsługującą Unicode
@@ -43,7 +46,7 @@ func main() {
 
 	g := NewGame()
 	ebiten.SetWindowSize(CanvasW, CanvasH)
-	ebiten.SetWindowTitle("Sun8x8 - Generator czcionek 8x8 wer: " + version)
+	ebiten.SetWindowTitle(appName + version)
 
 	g.updatePreviewText()
 
@@ -52,7 +55,7 @@ func main() {
 	//}
 
 	// zamykamy port na koniec programu
-	// zabezpieczenie przy zamykaniu serial
+	// dodatkowe zabezpieczenie przy zamykaniu portu serial
 	if matrixSerial != nil {
 		defer matrixSerial.Close()
 	}
