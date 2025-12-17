@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// siatka 8x8 edytora znaków
 const (
 	GridW    = 8
 	GridH    = 8
@@ -31,7 +32,7 @@ const (
 
 const AnimCellScale = 0.25
 
-// Game struktura gry / edytora
+// Game struktura edytora
 type Game struct {
 	cells [GridH][GridW]int
 
@@ -82,8 +83,6 @@ type Game struct {
 	glyphViewOfs  int      // offset podglądu (0,1,2... → okno 8 znaków)
 	displayGlyphs [][]byte // max 4 glyphy po 8 bajtów
 }
-
-var matrixSerial *SerialMatrix
 
 func NewGame() *Game {
 	g := &Game{}
@@ -475,6 +474,7 @@ func (g *Game) buildDisplayFrame() [][]int {
 	return frame
 }
 
+// loadGlyphToGrid >> wczytuje znak do siatki
 func (g *Game) loadGlyphToGrid(idx int) {
 	if idx < 0 || idx >= len(g.glyphs) {
 		return
@@ -495,6 +495,7 @@ func (g *Game) loadGlyphToGrid(idx int) {
 	g.updateDisplayGlyphs()
 }
 
+// aktualizacja wyświetlanego znaku
 func (g *Game) updateDisplayGlyphs() {
 	g.displayGlyphs = [][]byte{}
 	for i := 0; i < 3; i++ {
@@ -505,6 +506,7 @@ func (g *Game) updateDisplayGlyphs() {
 	}
 }
 
+// labelki
 func (g *Game) modeLabel() string {
 	switch g.mode {
 	case ModeMono:

@@ -22,6 +22,7 @@ import (
 var version = "0.0.15"
 var fontFace font.Face
 var appName = "Sun8x8 - Generator czcionek 8x8 wer: "
+var matrixSerial *SerialMatrix
 
 func main() {
 	// Wczytujemy czcionkę obsługującą Unicode
