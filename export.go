@@ -386,30 +386,13 @@ func GenerateCFromGlyphs(glyphs [][]byte, exportMode int, progmem bool) string {
 			}
 			b.WriteString(" },\n")
 		}
-	case Export2Bit:
+	case Export2Bit, ExportRGB:
 		if progmem {
 			b.WriteString(fmt.Sprintf("const uint16_t font[%d][8] PROGMEM = {\n", n))
 		} else {
 			b.WriteString(fmt.Sprintf("const uint16_t font[%d][8] = {\n", n))
 		}
 
-		for _, g := range glyphs {
-			b.WriteString("  { ")
-			for y := 0; y < 8; y++ {
-				if y > 0 {
-					b.WriteString(", ")
-				}
-				b.WriteString(fmt.Sprintf("0x%04X", uint16(g[y])))
-			}
-			b.WriteString(" },\n")
-		}
-	case ExportRGB:
-		// Obsłuż eksport RGB (np. jako tablica uint16_t[8][8])
-		if progmem {
-			b.WriteString(fmt.Sprintf("const uint16_t font[%d][8] PROGMEM = {\n", n))
-		} else {
-			b.WriteString(fmt.Sprintf("const uint16_t font[%d][8] = {\n", n))
-		}
 		for _, g := range glyphs {
 			b.WriteString("  { ")
 			for y := 0; y < 8; y++ {
