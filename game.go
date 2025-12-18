@@ -71,6 +71,14 @@ type Game struct {
 	sliderValue   float64
 	sliderGrabbed bool
 
+	// NOWY SUWAK: kolor mono
+	colorSliderX       int
+	colorSliderY       int
+	colorSliderW       int
+	colorSliderH       int
+	colorSliderValue   float64
+	colorSliderGrabbed bool
+
 	// font builder
 	glyphs     [][]byte
 	glyphIndex int
@@ -95,7 +103,8 @@ type Game struct {
 func NewGame() *Game {
 	g := &Game{}
 	g.mode = ModeMono
-	g.monoColor = 1
+
+	g.monoColor = 2 // kolor pixeli w siatce --> index zgodny z paletą w pliku palette.go
 	g.twoA = 2
 	g.twoB = 3
 	g.exportMode = Export1Bit
@@ -108,6 +117,13 @@ func NewGame() *Game {
 
 	g.animSpeed = 0.5
 	g.animDir = -1
+
+	// SUWAK: kolor mono
+	g.colorSliderX = 12
+	g.colorSliderY = GridH*CellSize + 68 + 32 + 8 + 10 // btnY + btnH + odstęp między przyciskami + dodatkowe pixele dla labela
+	g.colorSliderW = 200
+	g.colorSliderH = 14
+	g.colorSliderValue = float64(g.monoColor) / float64(len(palette)-1)
 
 	// ------ tutaj inicjalizacja serial -------
 	//matrixSerial = NewSerialMatrix("COM13", GridW, GridH)
@@ -136,22 +152,43 @@ func (g *Game) Update() error {
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		if !g.mouseDown {
 			g.mouseDown = true
-			if !g.handleSlider(x, y) {
-				g.handleLeftClick(x, y)
+			// sprawdzanie wszystkich suwaków
+			if !g.handleSlider(x, y) { // animacja
+				// NOWY SUWAK: kolor mono
+				if x >= g.colorSliderX && x <= g.colorSliderX+g.colorSliderW &&
+					y >= g.colorSliderY && y <= g.colorSliderY+g.colorSliderH {
+					g.colorSliderGrabbed = true
+				} else {
+					g.handleLeftClick(x, y)
+				}
 			}
-		} else if g.sliderGrabbed {
-			g.sliderValue = float64(x-g.sliderX) / float64(g.sliderW)
-			if g.sliderValue < 0 {
-				g.sliderValue = 0
+		} else {
+			// przeciąganie suwaków
+			if g.sliderGrabbed {
+				g.sliderValue = float64(x-g.sliderX) / float64(g.sliderW)
+				if g.sliderValue < 0 {
+					g.sliderValue = 0
+				}
+				if g.sliderValue > 1 {
+					g.sliderValue = 1
+				}
+				g.animSpeed = g.sliderValue
 			}
-			if g.sliderValue > 1 {
-				g.sliderValue = 1
+			if g.colorSliderGrabbed {
+				g.colorSliderValue = float64(x-g.colorSliderX) / float64(g.colorSliderW)
+				if g.colorSliderValue < 0 {
+					g.colorSliderValue = 0
+				}
+				if g.colorSliderValue > 1 {
+					g.colorSliderValue = 1
+				}
+				g.monoColor = int(g.colorSliderValue * float64(len(palette)-1))
 			}
-			g.animSpeed = g.sliderValue
 		}
 	} else {
 		g.mouseDown = false
 		g.sliderGrabbed = false
+		g.colorSliderGrabbed = false // <-- tutaj resetujemy "przyklejenie" suwaka koloru
 	}
 
 	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
@@ -231,6 +268,13 @@ func (g *Game) handleSlider(x, y int) bool {
 
 // obsługa kliknięć: siatka i przyciski
 func (g *Game) handleLeftClick(x, y int) {
+
+	// NOWY SUWAK: kliknięcie na suwak koloru
+	if x >= g.colorSliderX && x <= g.colorSliderX+g.colorSliderW &&
+		y >= g.colorSliderY && y <= g.colorSliderY+g.colorSliderH {
+		g.colorSliderGrabbed = true
+		return
+	}
 
 	// --- przycisk pod gridem: zapisz znak ---
 	btnX := 12

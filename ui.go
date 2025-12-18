@@ -93,13 +93,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	drawRect(screen, btnNextX, btnNextY, btnNextW, btnNextH, color.RGBA{R: 0x66, G: 0x66, B: 0x66, A: 0xff})
 	drawText(screen, ">>", btnNextX+20, btnNextY+20)
 
+	// 2C. kolor pixela dla MONO
+	colorIdx := int(g.colorSliderValue * float64(len(palette)-1))
+	drawText(screen, fmt.Sprintf("Kolor MONO: %d", colorIdx), g.colorSliderX, g.colorSliderY-20)
+	drawRect(screen, g.colorSliderX, g.colorSliderY, g.colorSliderW, g.colorSliderH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
+	handleX := g.colorSliderX + int(g.colorSliderValue*float64(g.colorSliderW))
+	idx := int(g.colorSliderValue * float64(len(palette)-1))
+	handleColor := palette[idx] // kolor uchwytu = aktualny indeks
+	drawRect(screen, handleX-4, g.colorSliderY-2, 8, g.colorSliderH+4, handleColor)
+
 	// ----------------------
 	// 3. Suwak prędkości animacji
 	// ----------------------
 	speedPercent := int(g.sliderValue * 100)
 	drawText(screen, fmt.Sprintf("Prędkość animacji: %d%%", speedPercent), g.sliderX, g.sliderY-20)
 	drawRect(screen, g.sliderX, g.sliderY, g.sliderW, g.sliderH, color.RGBA{R: 0x30, G: 0x30, B: 0x36, A: 0xff})
-	handleX := g.sliderX + int(g.sliderValue*float64(g.sliderW))
+	handleX = g.sliderX + int(g.sliderValue*float64(g.sliderW))
 	drawRect(screen, handleX-4, g.sliderY-2, 8, g.sliderH+4, color.RGBA{R: 0x2A, G: 0x80, B: 0xFF, A: 0xff})
 
 	// ----------------------

@@ -39,7 +39,7 @@ func isPicoOnPort(port string) bool {
 	}
 	defer func() {
 		if err := p.Close(); err != nil {
-			log.Printf("warning: failed to close port %s: %v", port, err)
+			log.Printf("Warning: nie można otwożyć portu:%s: %v", port, err)
 		}
 	}()
 
