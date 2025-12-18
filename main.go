@@ -1,12 +1,12 @@
-// ----------------------------------------------------------------------------------
-//
-// Generator czcionek 8x8 dla matryc LED (Ebiten)
-// Autor:  SunRiver / Lothar TeaM
-// Strona: https://forum.lothar-team.pl/
-//
-//
-//
-// ----------------------------------------------------------------------------------
+/*
+       Generator czcionek 8x8 dla matryc LED (Ebiten)
+
+Autor: SunRiver / Lothar TeaM
+  WWW: https://forum.lothar-team.pl/
+  Git: https://github.com/SunDUINO/Sun8x8_Font_generator.git
+ Plik: main.go
+
+*/
 
 package main
 

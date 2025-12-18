@@ -1,3 +1,11 @@
+/*
+Autor: SunRiver / Lothar TeaM
+  WWW: https://forum.lothar-team.pl/
+  Git: https://github.com/SunDUINO/Sun8x8_Font_generator.git
+ Plik: palette.go
+
+*/
+
 package main
 
 import "image/color"

@@ -1,3 +1,11 @@
+/*
+Autor: SunRiver / Lothar TeaM
+  WWW: https://forum.lothar-team.pl/
+  Git: https://github.com/SunDUINO/Sun8x8_Font_generator.git
+ Plik: game.go
+
+*/
+
 package main
 
 import (
