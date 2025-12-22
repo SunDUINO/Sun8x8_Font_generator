@@ -19,7 +19,7 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
-var version = "0.0.16"
+var version = "0.0.17"
 var fontFace font.Face
 var appName = "Sun8x8 - Generator czcionek 8x8 wer: "
 var matrixSerial *SerialMatrix

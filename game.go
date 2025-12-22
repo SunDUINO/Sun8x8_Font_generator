@@ -9,7 +9,6 @@ Autor: SunRiver / Lothar TeaM
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -29,6 +28,7 @@ const (
 	ModeMono = iota
 	ModeTwo
 	ModeRGB
+	ModeWS2812B
 )
 
 // eksport: bit-depth
@@ -111,7 +111,7 @@ func NewGame() *Game {
 
 	g.sliderX = 12
 	g.sliderY = GridH*CellSize + 260
-	g.sliderW = 300
+	g.sliderW = 200
 	g.sliderH = 14
 	g.sliderValue = 0.5
 
@@ -188,13 +188,18 @@ func (g *Game) Update() error {
 	} else {
 		g.mouseDown = false
 		g.sliderGrabbed = false
-		g.colorSliderGrabbed = false // <-- tutaj resetujemy "przyklejenie" suwaka koloru
+		g.colorSliderGrabbed = false // "przyklejenie" suwaka koloru
 	}
 
 	// ---- po obsłudze kliknięć wysyłamy ramkę do matrycy ----
 
 	if matrixSerial != nil {
-		err := matrixSerial.SendFrame(g.buildDisplayFrame())
+		var err error
+		if g.mode == ModeWS2812B {
+			err = matrixSerial.SendFrame(g.buildWS2812Frame())
+		} else {
+			err = matrixSerial.SendFrame(g.buildDisplayFrame())
+		}
 		if err != nil {
 			matrixSerial.Close()
 			matrixSerial = nil
@@ -218,7 +223,7 @@ func (g *Game) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyM) {
-		g.mode = (g.mode + 1) % 3
+		g.mode = (g.mode + 1) % 4
 		time.Sleep(140 * time.Millisecond)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyC) {
@@ -303,7 +308,7 @@ func (g *Game) handleLeftClick(x, y int) {
 	// Poprzedni znak
 	if x >= btnPrevX && x <= btnPrevX+btnPrevW &&
 		y >= btnPrevY && y <= btnPrevY+btnPrevH {
-		fmt.Println("Poprzedni klik:", x, y)
+		//fmt.Println("Poprzedni klik:", x, y)
 		if g.activeGlyph > 0 {
 			g.activeGlyph--
 			g.glyphIndex = g.activeGlyph
@@ -320,7 +325,7 @@ func (g *Game) handleLeftClick(x, y int) {
 	// Następny znak
 	if x >= btnNextX && x <= btnNextX+btnNextW &&
 		y >= btnNextY && y <= btnNextY+btnNextH {
-		fmt.Println("Następny klik:", x, y)
+		//fmt.Println("Następny klik:", x, y)
 		if g.activeGlyph < len(g.glyphs)-1 {
 			g.activeGlyph++
 			g.glyphIndex = g.activeGlyph
@@ -362,7 +367,14 @@ func (g *Game) handleLeftClick(x, y int) {
 				} else {
 					g.cells[yi][cx] = n + 1
 				}
+			case ModeWS2812B:
+				if g.cells[yi][cx] == g.monoColor {
+					g.cells[yi][cx] = 0 // wyłącz diodę jeśli ma ten sam kolor
+				} else {
+					g.cells[yi][cx] = g.monoColor // ustaw kolor z suwaka
+				}
 			}
+
 		}
 		return
 	}
@@ -381,7 +393,7 @@ func (g *Game) handleLeftClick(x, y int) {
 
 	// 1. Tryb
 	if click(by0) {
-		g.mode = (g.mode + 1) % 3
+		g.mode = (g.mode + 1) % 4
 		return
 	}
 	by0 += btnH + pad
@@ -526,6 +538,29 @@ func (g *Game) buildDisplayFrame() [][]int {
 	return frame
 }
 
+// buildWS2812Frame buduje ramkę dla matrycy WS2812B w układzie zig-zag 8x8
+func (g *Game) buildWS2812Frame() [][]int {
+	frame := make([][]int, 8)
+	for y := 0; y < 8; y++ {
+		frame[y] = make([]int, 8)
+	}
+
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			// określenie fizycznego indeksu kolumny w wierszu zig-zag
+			idxX := x
+			if y%2 == 1 { // co drugi wiersz od prawej do lewej
+				idxX = 7 - x
+			}
+
+			// kolor z komórki (0 = wyłączona, >0 = kolor z suwaka)
+			frame[y][idxX] = g.cells[y][x]
+		}
+	}
+
+	return frame
+}
+
 // loadGlyphToGrid >> wczytuje znak do siatki
 func (g *Game) loadGlyphToGrid(idx int) {
 	if idx < 0 || idx >= len(g.glyphs) {
@@ -567,6 +602,8 @@ func (g *Game) modeLabel() string {
 		return "2-BIT"
 	case ModeRGB:
 		return "RGB"
+	case ModeWS2812B:
+		return "WS2812B"
 	}
 	return "?"
 }
